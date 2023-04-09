@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use axum::{routing::get,Router,Server, extract::State};
+use axum::{routing::get,Router,Server, extract::State, Json, response::{IntoResponse, Html}};
 use sysinfo::{System, SystemExt, CpuExt};
 
 #[tokio::main]
@@ -30,24 +30,18 @@ struct AppState{
     sys:Arc<Mutex<System>>,
 }
 
-async fn root_get() -> &'static str {
-    "Hello"
+async fn root_get() -> impl IntoResponse {
+    let markup =
+        tokio::fs::read_to_string("src/index.html").await.unwrap();
+    Html(markup)
    
 }
 
-async fn cpus_get(State(state):State<AppState>) -> String {
-    use std::fmt::Write;
-
-    let mut s = String::new();
-
+async fn cpus_get(State(state):State<AppState>) -> impl IntoResponse {
+    // let mut s = String::new();
+    //FIXME
     let mut sys = state.sys.lock().unwrap();
-    // let  mut sys = System::new();
     sys.refresh_cpu();
-    for ( i, cpu ) in sys.cpus().iter().enumerate(){
-        let i = i + 1;
-        let usage = cpu.cpu_usage();
-        writeln!(&mut s,"CPU {i} {usage}%").unwrap();
-        
-    }
-    s
+    let v:Vec<_>  = sys.cpus().iter().map(|cpu|cpu.cpu_usage()).collect();
+    Json(v)
 }
