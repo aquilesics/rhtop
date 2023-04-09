@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use axum::{routing::get,Router,Server, extract::State, Json, response::{IntoResponse, Html}};
+use axum::{routing::get,Router,Server, extract::State, Json, response::{IntoResponse, Html}, http::{response, Response}};
 use sysinfo::{System, SystemExt, CpuExt};
 
 #[tokio::main]
@@ -8,6 +8,7 @@ async fn main() {
     let router =
         Router::new()
         .route("/",get(root_get))
+        .route("/index.js",get(indexjs_get))
         .route("/api/cpus",get(cpus_get))
         .with_state(AppState {
              sys: Arc::new( Mutex::new(System::new()))
@@ -28,6 +29,17 @@ async fn main() {
 #[derive(Clone)]
 struct AppState{
     sys:Arc<Mutex<System>>,
+}
+
+async fn indexjs_get() -> impl IntoResponse {
+    let markup =
+        tokio::fs::read_to_string("src/index.js").await.unwrap();
+    
+    Response::builder()
+        .header("content-type","application/javascript;charset=utf-8")
+        .body(markup)
+        .unwrap()
+   
 }
 
 async fn root_get() -> impl IntoResponse {
